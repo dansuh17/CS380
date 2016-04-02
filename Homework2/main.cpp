@@ -35,6 +35,9 @@ int frameBufferWidth = 0;
 int frameBufferHeight = 0;
 float fov = 45.0f;
 float fovy = fov;
+int viewpoint = 0;
+int number_of_frames = 0;
+int thisFrame = 0;
 
 // Model properties
 Model ground, redCube, greenCube;
@@ -43,6 +46,7 @@ glm::mat4 g_objectRbt[2] = { glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 0.
                             glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0.0f, 1.0f, 0.0f))}; // RBT for greenCube
 glm::mat4 eyeRBT;
 glm::mat4 worldRBT = glm::mat4(1.0f);
+glm::mat4 thisRBT;
 glm::mat4 aFrame;
 
 // Arcball manipulation
@@ -90,12 +94,19 @@ static void window_size_callback(GLFWwindow* window, int width, int height)
 // TODO: Fill up GLFW mouse button callback function
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
+    if (action == GLFW_PRESS) // mouse was pressd
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT)
+            std::cout << "the left mouse button" << std::endl;
+
+    }
 
 }
 
 // TODO: Fill up GLFW cursor position callback function
 static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    // to manipulate the object, apply tanslation and rotation on thisRBT!
 
 }
 
@@ -115,10 +126,14 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
             std::cout << "c\t\t Change manipulation method" << std::endl;
             break;
         case GLFW_KEY_V:
-            // TODO: Change viewpoint
+            // changes viewpoint
+            viewpoint = (++viewpoint) % number_of_frames;
             break;
         case GLFW_KEY_O:
             // TODO: Change manipulating object
+            // this has to change the frame
+            thisFrame = (++thisFrame) % (number_of_frames -1); // excludes 'sky', since it's not manipulatable
+            thisRBT = g_objectRbt[thisFrame];
             break;
         case GLFW_KEY_M:
             // TODO: Change auxiliary frame between world-sky and sky-sky
@@ -187,6 +202,8 @@ int main(void)
 
     // initial eye frame = sky frame;
     eyeRBT = skyRBT;
+    thisRBT = skyRBT;
+    number_of_frames++;
 
     // Initialize Ground Model
     ground = Model();
@@ -204,6 +221,8 @@ int main(void)
     redCube.set_projection(&Projection);
     redCube.set_eye(&eyeRBT);
     redCube.set_model(&g_objectRbt[0]);
+    number_of_frames++;
+
 
     greenCube = Model();
     init_cube(greenCube, glm::vec3(0.0, 1.0, 0.0));
@@ -212,6 +231,7 @@ int main(void)
     greenCube.set_projection(&Projection);
     greenCube.set_eye(&eyeRBT);
     greenCube.set_model(&g_objectRbt[1]);
+    number_of_frames++;
 
     // TODO: Initialize arcBall
     // Initialize your arcBall with DRAW_TYPE::INDEX (it uses GL_ELEMENT_ARRAY_BUFFER to draw sphere)
@@ -235,6 +255,17 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // TODO: Change Viewpoint with respect to your current view index
+        switch(viewpoint) {
+            case 0:
+                eyeRBT = skyRBT;
+                break;
+            case 1:
+                eyeRBT = g_objectRbt[0];
+                break;
+            case 2:
+                eyeRBT = g_objectRbt[1];
+                break;
+        }
 
         redCube.draw();
         greenCube.draw();
