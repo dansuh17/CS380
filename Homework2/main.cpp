@@ -38,6 +38,7 @@ float fovy = fov;
 int viewpoint = 0;
 int number_of_frames = 0;
 int thisFrame = 0;
+int aFrame_num = 0;
 
 // Model properties
 Model ground, redCube, greenCube;
@@ -107,7 +108,6 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
 static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 {
     // to manipulate the object, apply tanslation and rotation on thisRBT!
-
 }
 
 static void keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -143,10 +143,21 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
         // change the frame with which the rotation operates
         case GLFW_KEY_M:
             // TODO: Change auxiliary frame between world-sky and sky-sky
+            // manipulate aFrame
+            if (thisFrame == 0) {
+                if (aFrame_num == 0) {
+                    aFrame = transFact(worldRBT) * linearFact(eyeRBT);
+                }
+                else {
+                    aFrame = transFact(*thisRBT) * linearFact(eyeRBT);
+                }
+                aFrame_num = ~aFrame_num;
+            }
+
             break;
         case GLFW_KEY_C:
             // TODO: Add an additional manipulation method
-            // experiment : apply roatation on selected objects
+            // now try 'with respect to a certain frame' method
             glm::mat4 m_rotation = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
             *thisRBT = *thisRBT * m_rotation;
             break;
