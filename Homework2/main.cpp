@@ -46,7 +46,7 @@ glm::mat4 g_objectRbt[2] = { glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 0.
                             glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0.0f, 1.0f, 0.0f))}; // RBT for greenCube
 glm::mat4 eyeRBT;
 glm::mat4 worldRBT = glm::mat4(1.0f);
-glm::mat4 thisRBT;
+glm::mat4 *thisRBT;
 glm::mat4 aFrame;
 
 // Arcball manipulation
@@ -98,9 +98,9 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
     {
         if (button == GLFW_MOUSE_BUTTON_LEFT)
             std::cout << "the left mouse button" << std::endl;
-
+        else if (button == GLFW_MOUSE_BUTTON_RIGHT)
+            std::cout << "this is the right mouse button" << std::endl;
     }
-
 }
 
 // TODO: Fill up GLFW cursor position callback function
@@ -132,16 +132,23 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
         case GLFW_KEY_O:
             // TODO: Change manipulating object
             // this has to change the frame
-            thisFrame = (++thisFrame) % (number_of_frames -1); // excludes 'sky', since it's not manipulatable
-            thisRBT = g_objectRbt[thisFrame];
+            thisFrame = (++thisFrame) % number_of_frames; // should include sky
+            if (thisFrame == 0) {
+                thisRBT = &skyRBT;
+            }
+            else {
+                thisRBT = &g_objectRbt[thisFrame - 1];
+            }
             break;
+        // change the frame with which the rotation operates
         case GLFW_KEY_M:
             // TODO: Change auxiliary frame between world-sky and sky-sky
             break;
         case GLFW_KEY_C:
             // TODO: Add an additional manipulation method
-            break;
-        default:
+            // experiment : apply roatation on selected objects
+            glm::mat4 m_rotation = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+            *thisRBT = *thisRBT * m_rotation;
             break;
         }
     }
@@ -202,7 +209,7 @@ int main(void)
 
     // initial eye frame = sky frame;
     eyeRBT = skyRBT;
-    thisRBT = skyRBT;
+    thisRBT = &skyRBT;
     number_of_frames++;
 
     // Initialize Ground Model
