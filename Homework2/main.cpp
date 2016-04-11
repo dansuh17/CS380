@@ -47,7 +47,7 @@ glm::mat4 g_objectRbt[2] = { glm::translate(glm::mat4(1.0f), glm::vec3(-1.5f, 0.
                             glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), 90.0f, glm::vec3(0.0f, 1.0f, 0.0f))}; // RBT for greenCube
 glm::mat4 eyeRBT;
 glm::mat4 worldRBT = glm::mat4(1.0f);
-glm::mat4 *thisRBT;
+glm::mat4 *objRBT;
 glm::mat4 aFrame;
 
 // Arcball manipulation
@@ -116,51 +116,53 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
     {
         switch (key)
         {
-        case GLFW_KEY_H:
-            std::cout << "CS380 Homework Assignment 2" << std::endl;
-            std::cout << "keymaps:" << std::endl;
-            std::cout << "h\t\t Help command" << std::endl;
-            std::cout << "v\t\t Change eye frame (your viewpoint)" << std::endl;
-            std::cout << "o\t\t Change current manipulating object" << std::endl;
-            std::cout << "m\t\t Change auxiliary frame between world-sky and sky-sky" << std::endl;
-            std::cout << "c\t\t Change manipulation method" << std::endl;
-            break;
-        case GLFW_KEY_V:
-            // changes viewpoint
-            viewpoint = (++viewpoint) % number_of_frames;
-            break;
-        case GLFW_KEY_O:
-            // TODO: Change manipulating object
-            // this has to change the frame
-            thisFrame = (++thisFrame) % number_of_frames; // should include sky
-            if (thisFrame == 0) {
-                thisRBT = &skyRBT;
-            }
-            else {
-                thisRBT = &g_objectRbt[thisFrame - 1];
-            }
-            break;
-        // change the frame with which the rotation operates
-        case GLFW_KEY_M:
-            // TODO: Change auxiliary frame between world-sky and sky-sky
-            // manipulate aFrame
-            if (thisFrame == 0) {
-                if (aFrame_num == 0) {
-                    aFrame = transFact(worldRBT) * linearFact(eyeRBT);
+            case GLFW_KEY_H:
+                std::cout << "CS380 Homework Assignment 2" << std::endl;
+                std::cout << "keymaps:" << std::endl;
+                std::cout << "h\t\t Help command" << std::endl;
+                std::cout << "v\t\t Change eye frame (your viewpoint)" << std::endl;
+                std::cout << "o\t\t Change current manipulating object" << std::endl;
+                std::cout << "m\t\t Change auxiliary frame between world-sky and sky-sky" << std::endl;
+                std::cout << "c\t\t Change manipulation method" << std::endl;
+                break;
+            case GLFW_KEY_V:
+                // changes viewpoint
+                viewpoint = (++viewpoint) % number_of_frames;
+                break;
+            case GLFW_KEY_O:
+                // this has to change the frame
+                thisFrame = (++thisFrame) % number_of_frames; // should include sky
+                if (thisFrame == 0) {
+                    objRBT = &skyRBT;
                 }
                 else {
-                    aFrame = transFact(*thisRBT) * linearFact(eyeRBT);
+                    objRBT = &g_objectRbt[thisFrame - 1];
                 }
-                aFrame_num = ~aFrame_num;
+                break;
+            // change the frame with which the rotation operates
+            case GLFW_KEY_M:
+                // TODO: Change auxiliary frame between world-sky and sky-sky
+                // manipulate aFrame
+                if (aFrame_num == 0) {
+                    aFrame = transFact(worldRBT) * linearFact(skyRBT);
+                    aFrame_num++;
+                }
+                else {
+                    aFrame = transFact(skyRBT) * linearFact(skyRBT);
+                    aFrame_num--;
+                }
+                break;
+            case GLFW_KEY_X: {
+                glm::mat4 m_rotation2 = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+                *objRBT = aFrame * m_rotation2 * glm::inverse(aFrame) * *objRBT;
+                break;
             }
-
-            break;
-        case GLFW_KEY_C:
-            // TODO: Add an additional manipulation method
-            // now try 'with respect to a certain frame' method
-            glm::mat4 m_rotation = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-            *thisRBT = *thisRBT * m_rotation;
-            break;
+            case GLFW_KEY_C: {
+                // TODO: Add an additional manipulation method
+                glm::mat4 m_rotation = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+                *objRBT = aFrame * m_rotation * glm::inverse(aFrame) * *objRBT;
+                break;
+            }
         }
     }
 }
@@ -220,7 +222,7 @@ int main(void)
 
     // initial eye frame = sky frame;
     eyeRBT = skyRBT;
-    thisRBT = &skyRBT;
+    objRBT = &skyRBT;
     number_of_frames++;
 
     // Initialize Ground Model
@@ -253,6 +255,16 @@ int main(void)
 
     // TODO: Initialize arcBall
     // Initialize your arcBall with DRAW_TYPE::INDEX (it uses GL_ELEMENT_ARRAY_BUFFER to draw sphere)
+    arcBall = Model();
+    init_sphere(arcBall);
+    arcBall.initialize(DRAW_TYPE::INDEX, "VertexShader.glsl", "FragmentShader.glsl");
+
+    arcBall.set_projection(&Projection);
+    arcBall.set_eye(&eyeRBT);
+    arcBall.set_model(&arcballRBT);
+
+
+
 
     // Setting Light Vectors
     glm::vec3 lightVec = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -272,7 +284,8 @@ int main(void)
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // TODO: Change Viewpoint with respect to your current view index
+
+        // update Eye
         switch(viewpoint) {
             case 0:
                 eyeRBT = skyRBT;
@@ -283,13 +296,21 @@ int main(void)
             case 2:
                 eyeRBT = g_objectRbt[1];
                 break;
+            default: // should not happen!
+                break;
         }
+        aFrame = transFact(*objRBT) * linearFact(eyeRBT);
+
+
 
         redCube.draw();
         greenCube.draw();
         ground.draw();
 
         // TODO: Draw wireframe of arcball with dynamic radius
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // draw wireframe
+        arcBall.draw();
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // draw filled models again.
 
         // Swap buffers (Double buffering)
         glfwSwapBuffers(window);
