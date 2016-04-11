@@ -59,7 +59,7 @@ add_executable(Homework2
 	common/arcball.hpp
 	Homework2/VertexShader.glsl
 	Homework2/FragmentShader.glsl
-)
+		common/mouse.h common/mouse.cpp)
 target_link_libraries(Homework2
   ${ALL_LIBS}
 )

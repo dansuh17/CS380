@@ -21,6 +21,7 @@ using namespace glm;
 #include <common/affine.hpp>
 #include <common/geometry.hpp>
 #include <common/arcball.hpp>
+#include <common/mouse.h>
 
 float g_groundSize = 100.0f;
 float g_groundY = -2.5f;
@@ -51,9 +52,7 @@ glm::mat4 *objRBT;
 glm::mat4 aFrame;
 
 // manipulation helping variables
-bool is_pressed = false;
-double mouse_x = 0;
-double mouse_y = 0;
+MouseStatus *mouse = new MouseStatus();
 double delta_x = 0;
 double delta_y = 0;
 
@@ -107,22 +106,23 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
 {
     if (action == GLFW_PRESS) // mouse was pressed
     {
-        is_pressed = true;
+        mouse->set_isPressed(true);
         if (button == GLFW_MOUSE_BUTTON_LEFT)
-            std::cout << "the left mouse button" << std::endl;
+        {
+            mouse->set_pressed(GLFW_MOUSE_BUTTON_LEFT);
+        }
         else if (button == GLFW_MOUSE_BUTTON_RIGHT)
         {
-            std::cout << "this is the right mouse button" << std::endl;
+            mouse->set_pressed(GLFW_MOUSE_BUTTON_RIGHT);
         }
         else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
         {
-
+            mouse->set_pressed(GLFW_MOUSE_BUTTON_MIDDLE);
         }
     }
-    else if (action == GLFW_RELEASE)
+    else if (action == GLFW_RELEASE) // mouse released
     {
-        is_pressed = false;
-        std::cout << "mouse released" << std::endl;
+        mouse->set_isPressed(false);
     }
 }
 
@@ -131,14 +131,33 @@ static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 {
     // to manipulate the object, apply tanslation and rotation on thisRBT!
     // (x, y) = (0,0) is the lefthand top corner of the screen
-    delta_x = xpos - mouse_x;
-    delta_y = ypos - mouse_y;
-    mouse_x = xpos;
-    mouse_y = ypos;
-    if (is_pressed)
+    delta_x = mouse->get_deltaX(xpos);
+    delta_y = mouse->get_deltaY(ypos);
+    if (mouse->get_isPressed())
     {
-        glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(delta_x/20.0f, -delta_y/20.0f, 0.0f));
-        do_rbt_respectTO(aFrame, translation, objRBT);
+        if (mouse->get_pressed() == GLFW_MOUSE_BUTTON_LEFT)
+        {
+            // TODO: to be implemented with arcball
+            glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), 1.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+            do_rbt_respectTO(aFrame, rotation, objRBT);
+        }
+        if (mouse->get_pressed() == GLFW_MOUSE_BUTTON_RIGHT)
+        {
+            if ((objRBT == &skyRBT) && (eyeRBT == skyRBT) && (aFrame_num == 0))
+            {
+                delta_x = -delta_x;
+                delta_y = -delta_y;
+            }
+            glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(delta_x / 20.0f, -delta_y / 20.0f, 0.0f));
+            do_rbt_respectTO(aFrame, translation, objRBT);
+            do_rbt_respectTO(aFrame, translation, &arcballRBT);
+        }
+        if (mouse->get_pressed() == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+            glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, delta_y/20.0f));
+            do_rbt_respectTO(aFrame, translation, objRBT);
+            do_rbt_respectTO(aFrame, translation, &arcballRBT);
+        }
     }
 
 }
@@ -167,9 +186,11 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
                 thisFrame = (++thisFrame) % number_of_frames; // should include sky
                 if (thisFrame == 0) {
                     objRBT = &skyRBT;
+                    arcballRBT = worldRBT;
                 }
                 else {
                     objRBT = &g_objectRbt[thisFrame - 1];
+                    arcballRBT = *objRBT;
                 }
                 break;
             // change the frame with which the rotation operates
@@ -207,7 +228,6 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
 void do_rbt_respectTO(glm::mat4 aFrame, glm::mat4 transform, glm::mat4 *objRBT)
 {
     *objRBT = aFrame * transform * glm::inverse(aFrame) * *objRBT;
-
 }
 
 int main(void)
@@ -342,6 +362,7 @@ int main(void)
             default: // should not happen!
                 break;
         }
+        // update auxillary frame
         aFrame = transFact(*objRBT) * linearFact(eyeRBT);
 
 
