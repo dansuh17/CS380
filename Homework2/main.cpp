@@ -50,6 +50,13 @@ glm::mat4 worldRBT = glm::mat4(1.0f);
 glm::mat4 *objRBT;
 glm::mat4 aFrame;
 
+// manipulation helping variables
+bool is_pressed = false;
+double mouse_x = 0;
+double mouse_y = 0;
+double delta_x = 0;
+double delta_y = 0;
+
 // Arcball manipulation
 Model arcBall;
 glm::mat4 arcballRBT = glm::mat4(1.0f);
@@ -62,6 +69,9 @@ static void mouse_button_callback(GLFWwindow*, int, int, int);
 static void cursor_pos_callback(GLFWwindow*, double, double);
 static void keyboard_callback(GLFWwindow*, int, int, int, int);
 void update_fovy(void);
+
+// Helper functions
+void do_rbt_respectTO(glm::mat4, glm::mat4, glm::mat4*);
 
 // Helper function: Update the vertical field-of-view(float fovy in global)
 void update_fovy()
@@ -95,12 +105,24 @@ static void window_size_callback(GLFWwindow* window, int width, int height)
 // TODO: Fill up GLFW mouse button callback function
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    if (action == GLFW_PRESS) // mouse was pressd
+    if (action == GLFW_PRESS) // mouse was pressed
     {
+        is_pressed = true;
         if (button == GLFW_MOUSE_BUTTON_LEFT)
             std::cout << "the left mouse button" << std::endl;
         else if (button == GLFW_MOUSE_BUTTON_RIGHT)
+        {
             std::cout << "this is the right mouse button" << std::endl;
+        }
+        else if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+
+        }
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        is_pressed = false;
+        std::cout << "mouse released" << std::endl;
     }
 }
 
@@ -108,6 +130,17 @@ static void mouse_button_callback(GLFWwindow* window, int button, int action, in
 static void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
 {
     // to manipulate the object, apply tanslation and rotation on thisRBT!
+    // (x, y) = (0,0) is the lefthand top corner of the screen
+    delta_x = xpos - mouse_x;
+    delta_y = ypos - mouse_y;
+    mouse_x = xpos;
+    mouse_y = ypos;
+    if (is_pressed)
+    {
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(delta_x/20.0f, -delta_y/20.0f, 0.0f));
+        do_rbt_respectTO(aFrame, translation, objRBT);
+    }
+
 }
 
 static void keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -165,6 +198,16 @@ static void keyboard_callback(GLFWwindow* window, int key, int scancode, int act
             }
         }
     }
+}
+
+
+/*
+ * Helper function : applies an RBT with respect to current auxillary frame
+ */
+void do_rbt_respectTO(glm::mat4 aFrame, glm::mat4 transform, glm::mat4 *objRBT)
+{
+    *objRBT = aFrame * transform * glm::inverse(aFrame) * *objRBT;
+
 }
 
 int main(void)
